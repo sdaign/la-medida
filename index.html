@@ -16,4 +16,23 @@ function fitMap(){zoom=Math.min(1.35,(view.clientWidth-25)/maxX,(view.clientHeig
 document.getElementById('fit').onclick=fitMap;document.getElementById('plus').onclick=()=>{zoom=Math.min(2.5,zoom*1.2);applyZoom()};document.getElementById('minus').onclick=()=>{zoom=Math.max(.1,zoom/1.2);applyZoom()};document.getElementById('all').onclick=()=>{walk(data,n=>n.open=true);render()};document.getElementById('reset').onclick=()=>{walk(data,n=>n.open=false);render()};document.getElementById('next').onclick=()=>{let targets=visible.filter(o=>!o.node.open&&o.node.children.length);if(!targets.length)return;let depth=Math.min(...targets.map(o=>o.depth));targets.filter(o=>o.depth===depth).forEach(o=>o.node.open=true);render()};document.getElementById('edit').onclick=()=>{editing=!editing;document.getElementById('edit').classList.toggle('active',editing);document.getElementById('edit').textContent=editing?'Terminar edición':'Editar textos';render(false)};
 document.getElementById('save').onclick=()=>{document.getElementById('map-data').textContent=JSON.stringify(data).replace(/</g,'\u003c');let clone=document.documentElement.cloneNode(true);clone.querySelector('#scene').innerHTML='';clone.querySelector('#space').removeAttribute('style');clone.querySelector('body').classList.remove('editing');clone.querySelector('#edit').classList.remove('active');clone.querySelector('#edit').textContent='Editar textos';clone.querySelector('#toast').style.display='none';let blob=new Blob(['<!doctype html>\n'+clone.outerHTML],{type:'text/html;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='La_medida_interactiva.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);tell('HTML guardado con tus textos y el estado de las ramas.')};
 document.getElementById('full').onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){tell('Usa la opción de pantalla completa del navegador.')}};window.addEventListener('resize',fitMap);render();
+</script><script>
+view.addEventListener('wheel',function(e){
+ if(editing||e.target.closest('[contenteditable="true"]'))return;
+ e.preventDefault();
+ const rect=view.getBoundingClientRect(),px=e.clientX-rect.left,py=e.clientY-rect.top;
+ const old=zoom,nx=(view.scrollLeft+px)/old,ny=(view.scrollTop+py)/old;
+ const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?view.clientHeight:1);
+ zoom=Math.max(.1,Math.min(4,old*Math.exp(-delta*.0015)));
+ applyZoom();view.scrollLeft=nx*zoom-px;view.scrollTop=ny*zoom-py;
+},{passive:false});
+view.title='Gira la rueda para ampliar o reducir. Arrastra el fondo para desplazar el mapa.';
+let pan=null;
+view.addEventListener('pointerdown',function(e){
+ if(e.button!==0||e.target.closest('button,input,textarea,[contenteditable="true"],.node'))return;
+ pan={x:e.clientX,y:e.clientY,l:view.scrollLeft,t:view.scrollTop};view.setPointerCapture(e.pointerId);view.style.cursor='grabbing';
+});
+view.addEventListener('pointermove',function(e){if(pan){view.scrollLeft=pan.l-(e.clientX-pan.x);view.scrollTop=pan.t-(e.clientY-pan.y)}});
+function endPan(){pan=null;view.style.cursor=''}
+view.addEventListener('pointerup',endPan);view.addEventListener('pointercancel',endPan);
 </script></body></html>
